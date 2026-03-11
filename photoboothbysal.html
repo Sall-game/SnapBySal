@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aesthetic Mini Photobooth</title>
+    <style>
+        :root {
+            --primary: #ffcce5;
+            --bg: #fdf6f9;
+            --white: #ffffff;
+            --pastel-pink: #ffcce5;
+            --pastel-blue: #cce5ff;
+            --pastel-purple: #e5ccff;
+            --text: #555;
+        }
+
+        * { margin: 0; padding: 0; box-box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        h1 { margin-bottom: 20px; font-weight: 300; letter-spacing: 2px; color: #888; }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 900px;
+            align-items: center;
+        }
+
+        /* Layout Row */
+        .main-layout {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* Left Side: Preview & Camera */
+        .camera-section {
+            flex: 1;
+            min-width: 300px;
+            background: var(--white);
+            padding: 15px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            position: relative;
+            text-align: center;
+        }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #eee;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1); /* Mirror Effect */
+        }
+
+        #countdown {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8rem;
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 10;
+        }
+
+        /* Right Side: Settings */
+        .settings-panel {
+            width: 300px;
+            background: var(--white);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
+
+        .setting-group { margin-bottom: 20px; }
+        .setting-group label { display: block; margin-bottom: 10px; font-weight: 600; font-size: 0.9rem; }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px;
+            border: 1px solid #eee;
+            background: #f9f9f9;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.85rem;
+        }
+
+        button:hover { background: #f0f0f0; }
+        button.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+            border-radius: 12px;
+            margin-top: 10px;
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(255, 204, 229, 0.4);
+        }
+
+        .btn-reset {
+            margin-top: 10px;
+            background: none;
+            border: none;
+            text-decoration: underline;
+            color: #aaa;
+            width: 100%;
+        }
+
+        /* Result Section */
+        #result-section {
+            margin-top: 30px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #output-canvas-container {
+            background: white;
+            padding: 15px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            border-radius: 5px; /* Boxy look for frames */
+            margin-bottom: 20px;
+        }
+
+        canvas { max-width: 100%; height: auto; border-radius: 2px; }
+
+        /* Filters (CSS applied to video and canvas) */
+        .filter-normal { filter: none; }
+        .filter-bw { filter: grayscale(1); }
+        .filter-vintage { filter: sepia(0.5) contrast(1.1) brightness(0.9); }
+        .filter-bright { filter: brightness(1.2) saturate(1.1); }
+        .filter-soft { filter: brightness(1.1) saturate(0.8) contrast(0.9) blur(0.2px); }
+        .filter-warm { filter: sepia(0.2) saturate(1.4) hue-rotate(-10deg); }
+
+        @media (max-width: 600px) {
+            .settings-panel { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>K-PHOTOBOOTH</h1>
+
+    <div class="container">
+        <div class="main-layout">
+            <div class="camera-section">
+                <div id="video-container">
+                    <video id="webcam" autoplay playsinline></video>
+                    <div id="countdown">3</div>
+                </div>
+                <button id="start-btn" class="btn-main">Start Camera</button>
+                <button id="capture-btn" class="btn-main" style="display:none;">Ambil Foto</button>
+            </div>
+
+            <div class="settings-panel">
+                <div class="setting-group">
+                    <label>Layout</label>
+                    <div class="options-grid" id="layout-options">
+                        <button data-value="1" class="active">1 Foto</button>
+                        <button data-value="2">2 Berdampingan</button>
+                        <button data-value="4">4 Grid</button>
+                        <button data-value="strip">Photostrip</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>Warna Frame</label>
+                    <div class="options-grid" id="frame-options">
+                        <button data-color="#ffffff" class="active">Putih</button>
+                        <button data-color="#ffcce5">Pink</button>
+                        <button data-color="#cce5ff">Biru</button>
+                        <button data-color="#e5ccff">Ungu</button>
+                    </div>
+                </div>
+
+                <div class="setting-group">
+                    <label>Filter</label>
+                    <div class="options-grid" id="filter-options">
+                        <button data-filter="filter-normal" class="active">Normal</button>
+                        <button data-filter="filter-bw">B&W</button>
+                        <button data-filter="filter-vintage">Vintage</button>
+                        <button data-filter="filter-bright">Bright</button>
+                        <button data-filter="filter-soft">Soft</button>
+                        <button data-filter="filter-warm">Warm</button>
+                    </div>
+                </div>
+
+                <button class="btn-reset" onclick="resetSettings()">Reset Pengaturan</button>
+            </div>
+        </div>
+
+        <div id="result-section">
+            <div id="output-canvas-container">
+                <canvas id="finalCanvas"></canvas>
+            </div>
+            <button id="download-btn" class="btn-main" style="background: #a2d2ff; width: 250px;">Download Foto (PNG)</button>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const startBtn = document.getElementById('start-btn');
+        const captureBtn = document.getElementById('capture-btn');
+        const countdownEl = document.getElementById('countdown');
+        const canvas = document.getElementById('finalCanvas');
+        const ctx = canvas.getContext('2d');
+        const resultSection = document.getElementById('result-section');
+        const downloadBtn = document.getElementById('download-btn');
+
+        let currentLayout = '1';
+        let currentFrameColor = '#ffffff';
+        let currentFilter = 'filter-normal';
+        let photosTaken = [];
+
+        // 1. Access Camera
+        startBtn.addEventListener('click', async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false });
+                video.srcObject = stream;
+                startBtn.style.display = 'none';
+                captureBtn.style.display = 'block';
+            } catch (err) {
+                alert("Gagal mengakses kamera. Pastikan izin kamera diberikan.");
+            }
+        });
+
+        // 2. Settings Logic
+        function setupSelection(containerId, callback) {
+            const buttons = document.querySelectorAll(`#${containerId} button`);
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    buttons.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    callback(btn.dataset.value || btn.dataset.color || btn.dataset.filter);
+                });
+            });
+        }
+
+        setupSelection('layout-options', (val) => currentLayout = val);
+        setupSelection('frame-options', (val) => currentFrameColor = val);
+        setupSelection('filter-options', (val) => {
+            currentFilter = val;
+            video.className = val; // Apply real-time filter to preview
+        });
+
+        function resetSettings() {
+            location.reload();
+        }
+
+        // 3. Capture Process
+        captureBtn.addEventListener('click', () => {
+            photosTaken = [];
+            let countNeeded = (currentLayout === 'strip') ? 4 : parseInt(currentLayout);
+            takePhotoSequence(countNeeded);
+        });
+
+        async function takePhotoSequence(total) {
+            captureBtn.disabled = true;
+            resultSection.style.display = 'none';
+
+            for (let i = 0; i < total; i++) {
+                await startCountdown(3);
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = video.videoWidth;
+                tempCanvas.height = video.videoHeight;
+                const tCtx = tempCanvas.getContext('2d');
+                
+                // Mirroring effect for capture
+                tCtx.translate(tempCanvas.width, 0);
+                tCtx.scale(-1, 1);
+                tCtx.filter = getComputedStyle(video).filter;
+                tCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+                
+                photosTaken.push(tempCanvas.toDataURL('image/png'));
+            }
+
+            drawFinalLayout();
+            captureBtn.disabled = false;
+        }
+
+        function startCountdown(seconds) {
+            return new Promise(resolve => {
+                let current = seconds;
+                countdownEl.style.display = 'block';
+                countdownEl.innerText = current;
+                
+                const timer = setInterval(() => {
+                    current--;
+                    if (current <= 0) {
+                        clearInterval(timer);
+                        countdownEl.style.display = 'none';
+                        resolve();
+                    } else {
+                        countdownEl.innerText = current;
+                    }
+                }, 1000);
+            });
+        }
+
+        // 4. Draw Final Layout
+        function drawFinalLayout() {
+            const padding = 40;
+            const gap = 20;
+            const photoW = 400;
+            const photoH = 300;
+
+            let canvasW, canvasH;
+
+            // Define Canvas Size based on Layout
+            if (currentLayout === '1') {
+                canvasW = photoW + (padding * 2);
+                canvasH = photoH + (padding * 2);
+            } else if (currentLayout === '2') {
+                canvasW = (photoW * 2) + gap + (padding * 2);
+                canvasH = photoH + (padding * 2);
+            } else if (currentLayout === '4') {
+                canvasW = (photoW * 2) + gap + (padding * 2);
+                canvasH = (photoH * 2) + gap + (padding * 2);
+            } else if (currentLayout === 'strip') {
+                canvasW = photoW + (padding * 2);
+                canvasH = (photoH * 4) + (gap * 3) + (padding * 2.5);
+            }
+
+            canvas.width = canvasW;
+            canvas.height = canvasH;
+
+            // Background / Frame Color
+            ctx.fillStyle = currentFrameColor;
+            ctx.fillRect(0, 0, canvasW, canvasH);
+
+            // Draw Photos
+            photosTaken.forEach((dataUrl, index) => {
+                const img = new Image();
+                img.onload = () => {
+                    let x, y;
+                    if (currentLayout === '1') {
+                        x = padding; y = padding;
+                    } else if (currentLayout === '2') {
+                        x = padding + (index * (photoW + gap));
+                        y = padding;
+                    } else if (currentLayout === '4') {
+                        x = padding + (index % 2 * (photoW + gap));
+                        y = padding + (Math.floor(index / 2) * (photoH + gap));
+                    } else if (currentLayout === 'strip') {
+                        x = padding;
+                        y = padding + (index * (photoH + gap));
+                    }
+                    ctx.drawImage(img, x, y, photoW, photoH);
+                    
+                    if (index === photosTaken.length - 1) {
+                        resultSection.style.display = 'flex';
+                        resultSection.scrollIntoView({ behavior: 'smooth' });
+                    }
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        // 5. Download
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `photobooth-${Date.now()}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    </script>
+</body>
+</html>
